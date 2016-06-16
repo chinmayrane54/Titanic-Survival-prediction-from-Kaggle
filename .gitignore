@@ -1,0 +1,166 @@
+%Project details - Task is to complete the analysis of what sorts of people were likely to survive. In particular, we ask you to apply the tools of machine learning to predict which passengers survived the tragedy.
+%Data set link - https://www.kaggle.com/c/titanic/data
+
+%Training data set - train.csv
+
+%Testing data set - test.csv
+
+%=================================================================================================
+%STEP 1 -  Going through the training and testing data set and giving insights.
+
+%Binary Output
+%survival        Survival (Output)
+%                (0 = No; 1 = Yes)
+---------------------------------------------------------------------------------
+%Inputs
+%pclass          Passenger Class
+%                (1 = 1st; 2 = 2nd; 3 = 3rd)
+%name            Name
+%sex             Sex
+%age             Age
+%sibsp           Number of Siblings/Spouses Aboard
+%parch           Number of Parents/Children Aboard
+%ticket          Ticket Number
+%fare            Passenger Fare
+%cabin           Cabin
+%embarked        Port of Embarkation
+%                (C = Cherbourg; Q = Queenstown; S = Southampton)
+
+%Inputs used in the project - Sex (Male-0,Female - 1), Age, Fare, Sibsp, parch, pclass
+%================================== Data Preparation before Modeling===============================
+%Technique for Data wrangling before/after load -Transform- Extract-Transform - Load - Transform
+%BUSINESS INTELLIGENCE TOOLS used - Microsoft Excel, SQL server data tools, SQL server management studio
+
+%Before starting preparation of the data using SQL server data tools we need to transform the .csv file to a correct format, taking care of the delimiters, data format, dollar sign if any.
+
+%In this project i first converted the .csv file in .txt and properly opened in excel and adjusted the delimiters according.
+
+%STEP 2 :SQL server data tools to search for any anomaly such as delimiters not set properly or missing values.
+
+%In the training and testing data set found many missing age values. using SQL server data tools separated complete information and incomplete information. Complete info- Good data,used for final modeling. Incomplete info - Bad data - again processing.
+
+%STEP 3 : processing of the bad data. the bad data can be ignored and sent back to the origin for complete data or if possible can use Assumption depending on good data, calculating mean of the ages or regression.
+
+%==========2 ways================
+
+%Ignored (Only Good training and testing data)
+Regression (Predicted data from bad data alongwith good training and testing data)
+
+#Linear regression code for predicting age
+
+%% Load Data
+data = load('NumericGoodData.txt');
+X = data(:, 2:7);
+y = data(:, 8);
+m = length(y);
+
+%%Extra features for better output
+Xfare = X(:,6) .* X(:,6);
+Xfare1 = X(:,6) .* X(:,6) .* X(:,6);
+X = [X Xfare Xfare1];
+
+% Print out some data points
+fprintf('First 10 examples from the dataset: \n');
+fprintf(' x = [%.0f %.0f], y = %.0f \n', [X(1:10,:) y(1:10,:)]');
+
+% Scale features and set them to zero mean
+fprintf('Normalizing Features ...\n');
+[X mu sigma] = featureNormalize(X);
+
+% Add intercept term to X
+X = [ones(m, 1) X];
+% Choose some alpha value
+alpha = 0.5;
+num_iters = 400;
+
+[Row Col] = size(X);
+
+theta = zeros(Col, 1);
+[theta, J_history] = gradientDescentMulti(X, y, theta, alpha, num_iters);
+figure;
+plot(1:numel(J_history), J_history, '-b', 'LineWidth', 2);
+xlabel('Number of iterations');
+ylabel('Cost J');
+
+% Display gradient descent's result
+fprintf('Theta computed from gradient descent: \n');
+fprintf(' %f \n', theta);
+fprintf('\n');
+%=============================Feature normalization==========================%
+function [X_norm, mu, sigma] = featureNormalize(X)
+%FEATURENORMALIZE Normalizes the features in X 
+%   FEATURENORMALIZE(X) returns a normalized version of X where
+%   the mean value of each feature is 0 and the standard deviation
+%   is 1.
+X_norm = X;
+mu = zeros(1, size(X, 2));
+sigma = zeros(1, size(X, 2));
+
+mu = mean(X);
+sigma = std(X);
+%mul = repmat(mu,[47,1]);
+[~ featuresize]=size(mu);
+for i = 1:featuresize
+X_norm(:,i) = ((X(:,i) - mu(i))./sigma(i));
+end
+%===================================================Gradient descent code============%
+function [theta, J_history] = gradientDescentMulti(X, y, theta, alpha, num_iters)
+%GRADIENTDESCENTMULTI Performs gradient descent to learn theta
+%   theta = GRADIENTDESCENTMULTI(x, y, theta, alpha, num_iters) updates theta by
+%   taking num_iters gradient steps with learning rate alpha
+
+% Initialize some useful values
+m = length(y); % number of training examples
+J_history = zeros(num_iters, 1);
+
+for iter = 1:num_iters
+hyp = X * theta;
+
+sum = (hyp - y)' * X;
+GD = (alpha *(1/m)) .* sum;
+theta = theta - (GD');
+ J_history(iter) = computeCostMulti(X, y, theta);
+end
+end
+%==================================End of gradient descent code==========================%
+%%==========================Compute cost function=======================================%
+function J = computeCostMulti(X, y, theta)
+%COMPUTECOSTMULTI Compute cost for linear regression with multiple variables
+%   J = COMPUTECOSTMULTI(X, y, theta) computes the cost of using theta as the
+%   parameter for linear regression to fit the data points in X and y
+
+% Initialize some useful values
+m = length(y); % number of training examples
+
+% You need to return the following variables correctly 
+J = 0;
+lambda = 0.1;
+hyp = X * theta;
+J = (1/(2*m)) * (sum((hyp - y).^2));
+grad1 = (1/m) * (X(:,1)' * out1) ;
+gradall =  ((1/m) * (X(:,2:end)' * out1))+ (lambda/m) .* theta(2:end);
+grad = [grad1;gradall];
+%%================================End of Compute cost Function=========================%
+%%=====================================END OF TRAINING=================================%
+
+%%=============================TESTING, PREDICTING THE NEW AGE VALUES==================%
+
+data1 = load('NumericBadData.txt');
+Xa = data1;
+[ROW COLM] = size(Xa);
+XFare = Xa(:,6) .* Xa(:,6);
+XFare1 = Xa(:,6) .* Xa(:,6) .* Xa(:,6);
+Xa = [Xa XFare XFare1];
+
+[Xa mu sigma] = featureNormalize(Xa);
+
+% Add intercept term to X
+Xa = [ones(ROW, 1) Xa];
+
+Y = Xa * theta;
+Header1 = 'Age\n';
+fid=fopen('NewBadAge1.txt','w');
+%fprintf(fid, [ Header1 '\n']);
+fprintf(fid, '%f \n',[Y(:)]');
+fclose(fid);
+%%=======================End of testing and prediction of missing age values==========%

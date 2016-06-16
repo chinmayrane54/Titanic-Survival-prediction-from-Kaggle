@@ -1,0 +1,242 @@
+clear all;
+close all;
+clc;
+
+
+featureScaling = 1;
+regularization = 1;
+
+order2ndPoly = 0;
+order3rdPoly = 1;
+
+Input = load('MainMatlBtrainingfile.txt');
+
+
+% 1st column = Pclass
+% 2nd column = Sex (0=male 1 = female)
+% 3rd column = Age
+% 4th column = Sibsp
+% 5th column = Parch
+% 6th column = Fare
+% 7th column = Survived (output)
+
+%% Extra polynomial equations
+X = Input(:,1:end-1);
+y = Input(:,end);
+
+Xage2 = X(:,3) .* X(:,3);
+Xage3 = X(:,3) .* X(:,3) .* X(:,3);
+
+XPclass2 = X(:,1) .* X(:,1);
+XPclass3 = X(:,1) .* X(:,1) .* X(:,1);
+
+XSibsp2 = X(:,4) .* X(:,4);
+XSibsp3 = X(:,4) .* X(:,4) .* X(:,4);
+
+XParch2 = X(:,5) .* X(:,5);
+XParch3 = X(:,5) .* X(:,5) .* X(:,5);
+
+Xfare2 = X(:,6) .* X(:,6);
+Xfare3 = X(:,6) .* X(:,6) .* X(:,6);
+
+
+if (order3rdPoly)
+    X = [X XPclass2 Xage2 XSibsp2 XParch2 Xfare2 XPclass3 Xage3 XSibsp3 XParch3 Xfare3];
+elseif (order2ndPoly)
+    X = [X XPclass2 Xage2 XSibsp2 XParch2 Xfare2];
+else
+   X = X; 
+end
+    
+if (featureScaling)
+[X_norm, mu, sigma] = featureNormalize(X);
+X = X_norm;
+else
+    X=X;
+end
+
+m = size(X, 1);
+% Add ones to the X data matrix
+X = [ones(m, 1) X];
+
+%dividing into train file (60%), validation(20%), testing(20%)
+[trainInd,valInd,testInd] = dividerand(m,0.6,0.2,0.2);
+
+Xtrain = X(trainInd,:);
+ytrain = y(trainInd,1);
+
+Xcross_val = X(valInd,:);
+ycross_val = y(valInd,1);
+
+Xtest = X(testInd,:);
+ytest = y(testInd,1);
+
+% Initialize fitting parameters
+initial_theta = zeros(size(X, 2), 1);
+
+% Set regularization parameter lambda to 1 (you should vary this)
+lambda = 1;
+
+% Set Options
+options = optimset('GradObj', 'on', 'MaxIter', 400);
+
+%======================================TRAINING====================================
+if(regularization)
+    
+    %regularization--------------------
+    [costtrain, grad] = costFunctionReg(initial_theta, Xtrain, ytrain ,lambda);
+    fprintf('The first error is %f',costtrain); % =  0.693147
+    % Optimize
+    [theta, Jtrain, exit_flag] = ...
+        fminunc(@(t)(costFunctionReg(t, Xtrain, ytrain, lambda)), initial_theta, options);
+
+fprintf('The Final Error after regulaization is %f',Jtrain); %= 0.500490
+else
+    
+    %-------no regulaization-------------
+    [costtrain, grad] = costFunction(initial_theta, Xtrain, ytrain);
+    fprintf('The first error is %f',costtrain); %(= 0.693147 )
+    [theta, JTrain] = ...
+        fminunc(@(t)(costFunction(t, Xtrain, ytrain)), initial_theta, options);
+    fprintf('No regularised final error is %f',JTrain);    %(= 0.499734 ) 
+end
+
+% %======================================CrossValidation====================================
+initial_theta = zeros(size(X, 2), 1);
+
+% Set regularization parameter lambda to 1 (you should vary this)
+lambda = 1;
+
+% Set Options
+options = optimset('GradObj', 'on', 'MaxIter', 400);
+
+% 
+
+if(regularization)
+    
+    %regularization--------------------
+    [costCrossVal, grad] = costFunctionReg(initial_theta, Xcross_val, ycross_val, lambda);
+    fprintf('The first error is %f',costCrossVal); % =  0.693147
+    % Optimize
+    [theta, JcrossVal, exit_flag] = ...
+        fminunc(@(t)(costFunctionReg(t, Xcross_val, ycross_val, lambda)), initial_theta, options);
+    
+    fprintf('The Final Error after regulaization is %f',JcrossVal); %= 0.522931
+else
+    
+    %-------no regulaization-------------
+    [costCrossVal, grad] = costFunction(initial_theta, Xcross_val, ycross_val);
+    fprintf('The first error is %f',costCrossVal); %(without using any of the regularizations = 0.693147 )
+    [theta, JCrossVal] = ...
+        fminunc(@(t)(costFunction(t, Xcross_val, ycross_val)), initial_theta, options);
+    fprintf('No regularised final error is %f',JCrossVal);    %(using regularizations lambda as 0.1 = 0.0.521827 )
+    
+    
+end
+
+   
+ %=======================Testing-=======================
+ hyp = Xtest * theta;
+ hyp = sigmoid(hyp);
+ mtest = size(Xtest, 1);
+ cost1 = sum((-ytest .* log(hyp)) - ((1-ytest) .* log(1-hyp)));
+Jtest = (1/mtest) * cost1;
+% Jtest =  (1/(2 * mtest)) * sum((hyp - ytest).^2)
+ fprintf('\nFinal Testing Error = %f',Jtest);
+ 
+ 
+ save('ThetaFsRg.mat','theta');
+%=================function costFunctionReg====================
+function [J, grad] = costFunctionReg(theta, X, y, lambda)
+%COSTFUNCTIONREG Compute cost and gradient for logistic regression with regularization
+%   J = COSTFUNCTIONREG(theta, X, y, lambda) computes the cost of using
+%   theta as the parameter for regularized logistic regression and the
+%   gradient of the cost w.r.t. to the parameters. 
+
+% Initialize some useful values
+m = length(y); % number of training examples
+
+% You need to return the following variables correctly 
+J = 0;
+grad = zeros(size(theta));
+hyp= sigmoid(X*theta);
+cost = sum((-y .* log(hyp)) - ((1-y) .* log(1-hyp)));
+Rg = (lambda/(2*m)) * (sum((theta(2:end,:)).^2));
+J = ((1/m) * cost) + Rg;
+
+grad1 = (1/m) * (X(:,1)' * (hyp -y)) ;
+gradall =  ((1/m) * (X(:,2:end)' * (hyp -y))) + (lambda/m) .* theta(2:end);
+grad = [grad1;gradall];
+end
+%%=============================End of costFunctionReg==================
+%%============================costfunctionwithoutregularization===================
+function [J, grad] = costFunction(theta, X, y)
+%COSTFUNCTION Compute cost and gradient for logistic regression
+%   J = COSTFUNCTION(theta, X, y) computes the cost of using theta as the
+%   parameter for logistic regression and the gradient of the cost
+%   w.r.t. to the parameters.
+
+% Initialize some useful values
+m = length(y); % number of training examples
+
+% You need to return the following variables correctly 
+J = 0;
+grad = zeros(size(theta));
+hyp= sigmoid(X*theta);
+cost = sum((-y .* log(hyp)) - ((1-y) .* log(1-hyp)));
+J = ((1/m) * cost);
+
+grad =  ((1/m) * (X(:,1:end)' * (hyp -y))) 
+end
+
+%===============================================Training done=========================
+%===========================================Testing===================
+%testing of the code
+close all;
+clear all;
+clc;
+
+
+theta = importdata('ThetaFsRg.mat');
+Data2 = load('FinalTestingFile.txt');
+
+X = Data2(:,2:end);
+Pred = Data2(:,1); %to predict;
+
+Xage2 = X(:,3) .* X(:,3);
+Xage3 = X(:,3) .* X(:,3) .* X(:,3);
+
+XPclass2 = X(:,1) .* X(:,1);
+XPclass3 = X(:,1) .* X(:,1) .* X(:,1);
+
+XSibsp2 = X(:,4) .* X(:,4);
+XSibsp3 = X(:,4) .* X(:,4) .* X(:,4);
+
+XParch2 = X(:,5) .* X(:,5);
+XParch3 = X(:,5) .* X(:,5) .* X(:,5);
+
+Xfare2 = X(:,6) .* X(:,6);
+Xfare3 = X(:,6) .* X(:,6) .* X(:,6);
+
+    X = [X XPclass2 Xage2 XSibsp2 XParch2 Xfare2 XPclass3 Xage3 XSibsp3 XParch3 Xfare3];
+
+[X_norm, mu, sigma] = featureNormalize(X);
+X = X_norm;
+
+
+m = size(X, 1);
+
+X = [ones(m, 1) X];
+
+hyp = X * theta;
+hyp = sigmoid(hyp);
+for i = 1:m
+if (hyp(i) >= 0.5)
+    y(i) = 1;
+else
+    y(i)= 0;
+end
+end
+y = y';
+fprintf('\nTraining Set Accuracy: %f\n', mean(double(y == Pred)) * 100);
+

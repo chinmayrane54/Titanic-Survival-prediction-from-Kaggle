@@ -4,3 +4,6 @@ analysis of what sorts of people were likely to survive. In particular, we ask y
 The step one is to provide data analysis and prepare the data for data modeling from data anamolies
 STEP 1 - the file data preparation consists of step to prepare the data for modeling
 STEP 2 - Modeling for final preparation using Logistic regression consists of data modeling technique for prediction of survival of titanic passengers
+
+Train.csv -> Main training file which has missing age values 
+test.csv -> main testing file which has missing age values

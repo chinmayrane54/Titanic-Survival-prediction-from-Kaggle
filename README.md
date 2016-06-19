@@ -6,7 +6,7 @@ STEP 1 - Data preparation consists of step to prepare the data for modeling
 STEP 2 - Modeling for final preparation using Logistic regression consists of data modeling technique for prediction of survival of titanic passengers
 Train.csv -> Source training file which has missing age values 
 test.csv -> Source testing file which has missing age values
-%=======================================================source cleaning and prediction for training===============================
+%===================source cleaning and prediction for training=======================
 
 TrainWithAgeValues.csv -> Source cleaned training file which has correct age values for training to predict the missing age values
 TrainWithoutAgeValues.csv ->source cleaned testing file to predict the age values from above training file

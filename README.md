@@ -1,4 +1,5 @@
 # Titanic-Survival-prediction-from-Kaggle
+This is the longer version. as i tried in matlab as i wanted to test my own written supervised learning code. Shorter version using R/python will upload soon. Rest all the projects are in R.
 analysis of what sorts of people were likely to survive. In particular, we ask you to apply the tools of machine learning to predict which passengers survived the tragedy.
 
 The step one is to provide data analysis and prepare the data for data modeling from data anamolies
